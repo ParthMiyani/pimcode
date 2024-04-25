@@ -1,7 +1,16 @@
 const express = require("express");
+const bodyParser = require("body-parser");
+const jwt = require("jsonwebtoken");
+const authToken = require("./authToken");
 
 // Create an instance of Express
 const app = express();
+
+// Middleware to parse JSON
+app.use(express.json());
+
+// Secret key for JWT
+const secretKey = "your-secret-key";
 
 const USERS = [];
 
@@ -90,19 +99,18 @@ app.post("/login", (req, res) => {
     res.status(401).send("Invalid credentials");
     return;
   }
-  // generate token and send it back to the user in the response header or body as JSON object
-  res.setHeader(
-    "Authorization",
-    "pim " + Math.random().toString(36).substring(7)
-  );
-  res.status(200).send("Login successful");
+
+  // Generate JWT token
+  const token = jwt.sign({ userId: user.id, email: user.email }, secretKey);
+
+  res.status(200).json("JWT " + token);
 });
 
-app.get("/questions", (req, res) => {
+app.get("/questions", authToken.authenticateToken, (req, res) => {
   res.json(QUESTIONS);
 });
 
-app.post("/submissions", (req, res) => {
+app.post("/submissions", authToken.authenticateToken, (req, res) => {
   const { questionId, code } = req.body;
   if (!questionId || !code) {
     res.status(400).send("Question ID and code are required");
@@ -126,7 +134,7 @@ app.post("/submissions", (req, res) => {
   res.status(201).json(submission);
 });
 
-app.get("/submissions", (req, res) => {
+app.get("/submissions", authToken.authenticateToken, (req, res) => {
   // get submissions by user id from req body
   const { userId } = req.body;
   const submissions = SUBMISSIONS.filter(
